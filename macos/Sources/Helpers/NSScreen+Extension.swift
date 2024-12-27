@@ -6,6 +6,15 @@ extension NSScreen {
         deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32
     }
 
+    /// Height of the camera housing on this screen if this screen has an embedded camera.
+    var cameraHousingHeight: CGFloat? {
+        if #available(macOS 12.0, *) {
+            return safeAreaInsets.top == 0.0 ? nil : safeAreaInsets.top
+        } else {
+            return nil
+        }
+    }
+
     // Returns true if the given screen has a visible dock. This isn't
     // point-in-time visible, this is true if the dock is always visible
     // AND present on this screen.

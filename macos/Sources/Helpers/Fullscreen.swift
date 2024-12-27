@@ -170,7 +170,7 @@ class NonNativeFullscreen: FullscreenBase, FullscreenStyle {
         // We must hide the dock FIRST then hide the menu:
         // If you specify autoHideMenuBar, it must be accompanied by either hideDock or autoHideDock.
         // https://developer.apple.com/documentation/appkit/nsapplication/presentationoptions-swift.struct
-        if (savedState.dock) {
+        if savedState.dock {
             hideDock()
         }
 
@@ -201,9 +201,19 @@ class NonNativeFullscreen: FullscreenBase, FullscreenStyle {
         // hide, menu hide, etc.) take effect. This fixes:
         // https://github.com/ghostty-org/ghostty/issues/1996
         DispatchQueue.main.async {
-            self.window.setFrame(self.fullscreenFrame(screen), display: true)
+            self.setWindowFrameForLegacyFullScreen()
             self.delegate?.fullscreenDidChange()
         }
+    }
+
+    private func setWindowFrameForLegacyFullScreen() {
+        let screen = window.screen ?? NSScreen.main!
+        window.setFrame(screen.frame, display: true, animate: false)
+        guard let cameraHousingHeight = screen.cameraHousingHeight else { return }
+        // This screen contains an embedded camera. Shorten the height of the window's content view's
+        // frame to avoid having part of the window obscured by the camera housing.
+        let view = window.contentView!
+        view.setFrameSize(NSMakeSize(view.frame.width, screen.frame.height - cameraHousingHeight))
     }
 
     func exit() {
@@ -216,7 +226,7 @@ class NonNativeFullscreen: FullscreenBase, FullscreenStyle {
         center.removeObserver(self, name: NSWindow.didChangeScreenNotification, object: window)
 
         // Unhide our elements
-        if savedState.dock {
+        if (savedState.dock) {
             unhideDock()
         }
         unhideMenu()
@@ -237,7 +247,7 @@ class NonNativeFullscreen: FullscreenBase, FullscreenStyle {
         // fullscreen removes the window from the tab group.
         if let tabGroup = savedState.tabGroup,
            let tabIndex = savedState.tabGroupIndex,
-            !tabGroup.windows.isEmpty {
+           !tabGroup.windows.isEmpty {
             if tabIndex == 0 {
                 // We were previously the first tab. Add it before ("below")
                 // the first window in the tab group currently.
@@ -258,7 +268,7 @@ class NonNativeFullscreen: FullscreenBase, FullscreenStyle {
         window.makeKeyAndOrderFront(nil)
 
         // Notify the delegate
-        self.delegate?.fullscreenDidChange()
+        delegate?.fullscreenDidChange()
     }
 
     private func fullscreenFrame(_ screen: NSScreen) -> NSRect {
